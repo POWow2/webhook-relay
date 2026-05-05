@@ -1,6 +1,6 @@
 import { createConnection, getConnectionOptions } from 'typeorm';
-import { Webhook } from '../entities/Webhook';
-import { Destination } from '../entities/Destination';
+import { Webhook } from './entities/Webhook';
+import { Destination } from './entities/Destination';
 
 export async function setupDatabase() {
   try {
@@ -18,10 +18,9 @@ export async function setupDatabase() {
   }
 }
 
-// Create tables if they don't exist
 export async function createSchema(connection: any) {
   try {
-    await connection.synchronize();
+    await connection.synchronize(true);
     console.log('Database schema created successfully');
   } catch (error) {
     console.error('Failed to create schema:', error);

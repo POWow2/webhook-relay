@@ -18,11 +18,11 @@ export async function setupDatabase() {
   }
 }
 
-// Create tables if they don't exist
-export async function createSchema(connection: any) {
+export async function createSchema() {
   try {
+    const connection = await setupDatabase();
     await connection.synchronize();
-    console.log('Database schema created/updated successfully');
+    console.log('Database schema created successfully');
   } catch (error) {
     console.error('Failed to create schema:', error);
     throw error;
