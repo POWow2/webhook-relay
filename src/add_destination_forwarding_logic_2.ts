@@ -1,11 +1,11 @@
 import express from 'express';
-import { Pool } from 'pg';
 import axios from 'axios';
+import { Pool } from 'pg';
 
 interface WebhookEvent {
   id: string;
   payload: any;
-  createdAt: Date;
+  timestamp: Date;
 }
 
 interface Destination {
@@ -33,12 +33,13 @@ export class DestinationForwardingService {
           await axios.post(dest.url, {
             event_id: event.id,
             payload: event.payload,
-            timestamp: event.createdAt
+            timestamp: event.timestamp
           }, {
             headers: {
               'Content-Type': 'application/json',
               'X-Webhook-Signature': this.generateSignature(dest.secret, event.payload)
-            }
+            },
+            timeout: 5000
           });
         } catch (error) {
           console.error(`Failed to forward to destination ${dest.id}:`, error);
@@ -50,7 +51,7 @@ export class DestinationForwardingService {
   }
 
   private generateSignature(secret: string, payload: any): string {
-    // Simple HMAC signature generation
+    // Simple HMAC signature generation for demonstration
     const crypto = require('crypto');
     return crypto
       .createHmac('sha256', secret)
@@ -59,20 +60,22 @@ export class DestinationForwardingService {
   }
 }
 
-export const createDestinationForwardingMiddleware = (pool: Pool) => {
+export const setupDestinationForwarding = (app: express.Application, pool: Pool) => {
   const service = new DestinationForwardingService(pool);
   
-  return async (req: express.Request, res: express.Response, next: express.NextFunction) => {
-    if (req.method === 'POST' && req.path === '/webhook') {
+  app.post('/webhook', async (req, res) => {
+    try {
       const event: WebhookEvent = {
-        id: req.headers['x-webhook-id'] as string || Date.now().toString(),
+        id: Date.now().toString(),
         payload: req.body,
-        createdAt: new Date()
+        timestamp: new Date()
       };
       
-      service.forwardWebhookToDestinations(event).catch(console.error);
+      await service.forwardWebhookToDestinations(event);
+      res.status(200).send('Webhook processed');
+    } catch (error) {
+      console.error('Error processing webhook:', error);
+      res.status(500).send('Error processing webhook');
     }
-    
-    next();
-  };
+  });
 };
